@@ -1,0 +1,10 @@
+nayeon,vip
+jeongyeon,vip
+momo,vip
+sana,normal
+jihyo,normal
+mina,normal
+dahyun,non
+chaeyoung,non
+tzuyu,non
+

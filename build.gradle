@@ -1,0 +1,165 @@
+plugins 
+{
+    id 'java'
+}
+
+group 'com.example'
+version '1.0-SNAPSHOT'
+
+repositories 
+{
+    mavenCentral()
+}
+
+sourceSets 
+{
+    main 
+    {
+        resources 
+        {
+            srcDir 'src/main'
+        }
+    }
+
+    test
+    {
+        java
+        {
+            srcDir 'src/test'
+        }
+    }
+}
+
+dependencies 
+{
+    // Add JUnit dependency for testing
+    testImplementation 'junit:junit:4.13.2'
+    implementation files('libs/byte-buddy-1.12.8.jar')
+    implementation files('libs/byte-buddy-agent-1.12.8.jar')
+    implementation files('libs/JUnitParams-1.0.2.jar')
+    implementation files('libs/mockito-core-4.4.0.jar')
+    implementation files('libs/objenesis-3.2.jar')
+}
+
+// Define a task to Run a Test
+task RunTest(type: Test)
+{
+    // Specify the directory containing test classes
+    testClassesDirs = sourceSets.test.output.classesDirs
+    
+    // Optionally configure test options
+    testLogging 
+    {
+        // Configure which events to log during test execution
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+// Define a task to build an executable JAR file
+task BuildJar(type: Jar) 
+{
+    manifest 
+    {
+        attributes 'Main-Class': 'com.example.Main' // Set the main class for the jar
+    }
+
+    from sourceSets.main.output // Include compiled classes in the JAR
+    archiveBaseName = 'jar' // Name of the JAR file
+    destinationDirectory = file('build/libs') // Output directory for the JAR file
+}
+
+// Task to copy resource files to a specific directory
+task copyResources(type: Copy) 
+{
+    from 'src/main/resources'
+    into 'build/resources/main'
+}
+
+// Task to create a zip archive of the project
+task createZip(type: Zip) 
+{
+    from 'build'
+    archiveFileName = 'Assignment1.zip'
+    destinationDirectory = file('build/distributions')
+}
+
+// // Task push build folder to GitHub
+// task pushToGitHub(type: Exec) 
+// {
+//     workingDir 'build'
+
+//     // Initialize git
+//     commandLine 'git', 'init'
+//     exec()
+
+//     // Add all files
+//     commandLine 'git', 'add', '.'
+//     exec()
+
+//     // Commit the changes
+//     commandLine 'git', 'commit', '-m', 'Automated deployment'
+//     exec()
+
+//     // Set the branch name
+//     commandLine 'git', 'branch', '-M', 'main'
+//     exec()
+
+//     // Add the remote repository
+//     commandLine 'git', 'remote', 'add', 'origin',
+//     'https://github.com/ghkdgksrl/HOTEL.git'
+//     exec()
+
+//     // Push to the remote repository
+//     commandLine 'git', 'push', '-u', 'origin', 'main'
+//     exec()
+// }
+
+task pushToGitHub(type: Exec) {
+    workingDir project.rootDir
+
+    // Define the repository URL - you might want to move this to gradle.properties
+    def repoUrl = 'https://github.com/ghkdgksrl/HOTEL.git'
+
+    doFirst {
+        if (!file('.git').exists()) {
+            throw new GradleException("Git repository not found. Please initialize Git first.")
+        }
+
+        def status = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'status', '--porcelain'
+            standardOutput = status
+        }
+        if (status.toString().trim().empty) {
+            throw new GradleException("No changes to commit")
+        }
+
+        // Check if the remote already exists
+        def remotes = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'remote'
+            standardOutput = remotes
+        }
+        if (!remotes.toString().contains('origin')) {
+            exec {
+                commandLine 'git', 'remote', 'add', 'origin', repoUrl
+            }
+        } else {
+            exec {
+                commandLine 'git', 'remote', 'set-url', 'origin', repoUrl
+            }
+        }
+    }
+
+    commandLine 'git', 'add', 'build'
+    commandLine 'git', 'commit', '-m', 'Automated deployment'
+    commandLine 'git', 'push', 'origin', 'main'
+
+    ignoreExitValue true
+
+    doLast {
+        if (execResult.exitValue != 0) {
+            throw new GradleException("Git push failed. Exit code: ${execResult.exitValue}")
+        }
+    }
+}
