@@ -15,15 +15,15 @@ sourceSets
 {
     main 
     {
-        resources 
+        java 
         {
             srcDir 'src/main'
         }
     }
 
-    test
+    test 
     {
-        java
+        java 
         {
             srcDir 'src/test'
         }
@@ -58,93 +58,85 @@ task RunTest(type: Test)
 // Define a task to build an executable JAR file
 task BuildJar(type: Jar) 
 {
+    archiveBaseName = 'hotel' // Name of the JAR file
+
     manifest 
     {
-        attributes 'Main-Class': 'com.example.Main' // Set the main class for the jar
+        // Set the main class for the JAR
+        attributes 'Main-Class': 'com.example.Main' 
     }
 
-    from sourceSets.main.output // Include compiled classes in the JAR
-    archiveBaseName = 'jar' // Name of the JAR file
-    destinationDirectory = file('build/libs') // Output directory for the JAR file
+    // Include compiled classes in the JAR
+    from sourceSets.main.output
+
+    // Output directory for the JAR file
+    destinationDirectory = file('build/libs')
 }
+
 
 // Task to copy resource files to a specific directory
 task copyResources(type: Copy) 
 {
-    from 'src/main/resources'
+    from 'src/main'
     into 'build/resources/main'
+    exclude '**/*.class'  // Exclude compiled class files
 }
+
 
 // Task to create a zip archive of the project
 task createZip(type: Zip) 
 {
+    // Include the build directory in the ZIP file
     from 'build'
-    archiveFileName = 'Assignment1.zip'
-    destinationDirectory = file('build/distributions')
+
+    // Set the name of the ZIP file
+    archiveFileName.set('Assignment1.zip')
+
+    // Set the destination directory for the ZIP file
+    destinationDirectory.set(file('build/distributions'))  
 }
 
-// // Task push build folder to GitHub
-// task pushToGitHub(type: Exec) 
-// {
-//     workingDir 'build'
 
-//     // Initialize git
-//     commandLine 'git', 'init'
-//     exec()
-
-//     // Add all files
-//     commandLine 'git', 'add', '.'
-//     exec()
-
-//     // Commit the changes
-//     commandLine 'git', 'commit', '-m', 'Automated deployment'
-//     exec()
-
-//     // Set the branch name
-//     commandLine 'git', 'branch', '-M', 'main'
-//     exec()
-
-//     // Add the remote repository
-//     commandLine 'git', 'remote', 'add', 'origin',
-//     'https://github.com/ghkdgksrl/HOTEL.git'
-//     exec()
-
-//     // Push to the remote repository
-//     commandLine 'git', 'push', '-u', 'origin', 'main'
-//     exec()
-// }
-
-task pushToGitHub(type: Exec) {
+// Task to push build folder to GitHub
+task pushToGitHub(type: Exec) 
+{
     workingDir project.rootDir
     def repoUrl = 'https://github.com/ghkdgksrl/HOTEL.git'
 
-    doFirst {
+    doFirst 
+    {
         println "Current directory: ${workingDir}"
         
-        if (!file('.git').exists()) {
+        if (!file('.git').exists()) 
+        {
             throw new GradleException("Git repository not found. Please initialize Git first.")
         }
 
         def branchName = new ByteArrayOutputStream()
-        exec {
+        exec 
+        {
             commandLine 'git', 'rev-parse', '--abbrev-ref', 'HEAD'
             standardOutput = branchName
         }
+
         branchName = branchName.toString().trim()
         println "Current branch: ${branchName}"
 
         def status = new ByteArrayOutputStream()
-        exec {
+        exec 
+        {
             commandLine 'git', 'status'
             standardOutput = status
         }
         println "Git status: ${status.toString()}"
 
-        exec {
+        exec 
+        {
             commandLine 'git', 'remote', 'set-url', 'origin', repoUrl
         }
         
-        exec {
+        exec 
+        {
             commandLine 'git', 'remote', '-v'
             standardOutput = System.out
         }
@@ -157,12 +149,18 @@ task pushToGitHub(type: Exec) {
 
     ignoreExitValue true
 
-    doLast {
+    doLast 
+    {
         def result = executionResult.get()
-        if (result.exitValue != 0) {
+
+        if (result.exitValue != 0) 
+        {
             println "Git push failed. Exit code: ${result.exitValue}"
             throw new GradleException("Git push failed")
-        } else {
+        } 
+        
+        else 
+        {
             println "Push to GitHub completed successfully."
         }
     }
