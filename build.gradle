@@ -116,50 +116,54 @@ task createZip(type: Zip)
 
 task pushToGitHub(type: Exec) {
     workingDir project.rootDir
-
-    // Define the repository URL - you might want to move this to gradle.properties
     def repoUrl = 'https://github.com/ghkdgksrl/HOTEL.git'
 
     doFirst {
+        println "Current directory: ${workingDir}"
+        
         if (!file('.git').exists()) {
             throw new GradleException("Git repository not found. Please initialize Git first.")
         }
 
+        def branchName = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'rev-parse', '--abbrev-ref', 'HEAD'
+            standardOutput = branchName
+        }
+        branchName = branchName.toString().trim()
+        println "Current branch: ${branchName}"
+
         def status = new ByteArrayOutputStream()
         exec {
-            commandLine 'git', 'status', '--porcelain'
+            commandLine 'git', 'status'
             standardOutput = status
         }
-        if (status.toString().trim().empty) {
-            throw new GradleException("No changes to commit")
-        }
+        println "Git status: ${status.toString()}"
 
-        // Check if the remote already exists
-        def remotes = new ByteArrayOutputStream()
         exec {
-            commandLine 'git', 'remote'
-            standardOutput = remotes
+            commandLine 'git', 'remote', 'set-url', 'origin', repoUrl
         }
-        if (!remotes.toString().contains('origin')) {
-            exec {
-                commandLine 'git', 'remote', 'add', 'origin', repoUrl
-            }
-        } else {
-            exec {
-                commandLine 'git', 'remote', 'set-url', 'origin', repoUrl
-            }
+        
+        exec {
+            commandLine 'git', 'remote', '-v'
+            standardOutput = System.out
         }
     }
 
-    commandLine 'git', 'add', 'build'
-    commandLine 'git', 'commit', '-m', 'Automated deployment'
-    commandLine 'git', 'push', 'origin', 'main'
+    commandLine 'git', 'push', '-u', 'origin', 'HEAD:main'
+
+    standardOutput = System.out
+    errorOutput = System.err
 
     ignoreExitValue true
 
     doLast {
-        if (execResult.exitValue != 0) {
-            throw new GradleException("Git push failed. Exit code: ${execResult.exitValue}")
+        def result = executionResult.get()
+        if (result.exitValue != 0) {
+            println "Git push failed. Exit code: ${result.exitValue}"
+            throw new GradleException("Git push failed")
+        } else {
+            println "Push to GitHub completed successfully."
         }
     }
 }
